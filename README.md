@@ -1,4 +1,4 @@
-### ShardFS
+### ShardFS(MINOR PROJECT)
 - A Fault Tolerant and self healing distributed storage system
 - It will contain three parts : Master Node, Worker Node And CLI
 
