@@ -32,40 +32,76 @@ export const decideChunkSize = (
  * - Deducts chunk size from a local copy to balance assignments within the same file.
  */
 
+// let roundRobinCounter = 0;
+
+// export function chooseWorkersForChunk(
+//   chunkSize: number,
+//   replicationFactor = DEFAULT_RF
+// ): string[] {
+//   // Get all alive workers that can hold the chunk
+//   const aliveWorkers = workerManager
+//     .getAliveWorkers()
+//     .filter((w) => w.freeBytes >= chunkSize);
+//   if (aliveWorkers.length === 0) return [];
+
+//   // Make a local copy for planning
+//   const workerPool = aliveWorkers.map((w) => ({ ...w }));
+
+//   // Sort descending by freeBytes (space-aware)
+//   workerPool.sort((a, b) => b.freeBytes - a.freeBytes);
+
+//   // Start index rotates using round-robin
+//   const startIdx = roundRobinCounter % workerPool.length;
+//   roundRobinCounter++;
+
+//   const chosen: string[] = [];
+//   let i = 0;
+
+//   // Pick replicationFactor workers using round-robin over the sorted list
+//   while (chosen.length < replicationFactor && i < workerPool.length) {
+//     const idx = (startIdx + i) % workerPool.length;
+//     const worker = workerPool[idx];
+
+//     if (!chosen.includes(worker.id)) {
+//       chosen.push(worker.id);
+//       // Deduct allocated space in local pool to prevent overload for next chunks
+//       //   worker.freeBytes -= chunkSize;
+//     }
+
+//     i++;
+//   }
+
+//   return chosen;
+// }
+
 let roundRobinCounter = 0;
 
 export function chooseWorkersForChunk(
   chunkSize: number,
+  workerMap: Map<string, { id: string; freeBytes: number }>,
   replicationFactor = DEFAULT_RF
 ): string[] {
-  // Get all alive workers that can hold the chunk
-  const aliveWorkers = workerManager
-    .getAliveWorkers()
-    .filter((w) => w.freeBytes >= chunkSize);
-  if (aliveWorkers.length === 0) return [];
+  const sortedWorkers = Array.from(workerMap.values()).sort(
+    (a, b) => b.freeBytes - a.freeBytes
+  );
+  if (sortedWorkers.length === 0) return [];
 
-  // Make a local copy for planning
-  const workerPool = aliveWorkers.map((w) => ({ ...w }));
-
-  // Sort descending by freeBytes (space-aware)
-  workerPool.sort((a, b) => b.freeBytes - a.freeBytes);
-
-  // Start index rotates using round-robin
-  const startIdx = roundRobinCounter % workerPool.length;
+  const startIdx = roundRobinCounter % sortedWorkers.length;
   roundRobinCounter++;
 
   const chosen: string[] = [];
   let i = 0;
 
-  // Pick replicationFactor workers using round-robin over the sorted list
-  while (chosen.length < replicationFactor && i < workerPool.length) {
-    const idx = (startIdx + i) % workerPool.length;
-    const worker = workerPool[idx];
+  while (chosen.length < replicationFactor && i < sortedWorkers.length) {
+    const idx = (startIdx + i) % sortedWorkers.length;
+    const worker = sortedWorkers[idx];
 
     if (!chosen.includes(worker.id)) {
       chosen.push(worker.id);
-      // Deduct allocated space in local pool to prevent overload for next chunks
-      worker.freeBytes -= chunkSize;
+
+      // Deduct allocated space in the Map (O(1) lookup)
+      const wInMap = workerMap.get(worker.id);
+      if (wInMap) wInMap.freeBytes -= chunkSize;
     }
 
     i++;
@@ -81,6 +117,56 @@ export function chooseWorkersForChunk(
  * - Deducts allocated space to balance future chunks
  */
 
+// export function planFileChunks(
+//   filename: string,
+//   sizeBytes: number,
+//   replicationFactor = DEFAULT_RF
+// ): FilePlan {
+//   const aliveWorkers = workerManager.getAliveWorkers();
+//   if (aliveWorkers.length === 0) throw new Error("No alive workers available");
+
+//   const chunkSize = decideChunkSize(sizeBytes, aliveWorkers.length);
+//   const numChunks = Math.ceil(sizeBytes / chunkSize);
+
+//   // Create mutable copy for planning
+//   const workerPool = aliveWorkers.map((w) => ({ ...w }));
+
+//   const chunks: ChunkPlan[] = [];
+//   for (let i = 0; i < numChunks; i++) {
+//     const id = `${filename}_part${i}_${uuidv4().slice(0, 8)}`;
+//     const thisChunkSize =
+//       i === numChunks - 1 ? sizeBytes - i * chunkSize : chunkSize;
+
+//     // Sort workers by available freeBytes
+//     workerPool.sort((a, b) => b.freeBytes - a.freeBytes);
+//     const chosen = workerPool.slice(0, replicationFactor).map((w) => w.id);
+
+//     if (chosen.length < replicationFactor) {
+//       throw new Error(
+//         `Insufficient workers for replication: needed ${replicationFactor}, got ${chosen.length}`
+//       );
+//     }
+
+//     // Deduct used space
+//     chosen.forEach((id) => {
+//       const w = workerPool.find((x) => x.id === id);
+//       if (w) w.freeBytes -= thisChunkSize;
+//     });
+
+//     chunks.push({ id, size: thisChunkSize, workers: chosen, index: i });
+//   }
+
+//   const plan: FilePlan = {
+//     filename,
+//     size: sizeBytes,
+//     chunkSize,
+//     chunks,
+//     createdAt: Date.now(),
+//   };
+//   mappingStore.saveFilePlan(plan);
+//   return plan;
+// }
+
 export function planFileChunks(
   filename: string,
   sizeBytes: number,
@@ -92,32 +178,36 @@ export function planFileChunks(
   const chunkSize = decideChunkSize(sizeBytes, aliveWorkers.length);
   const numChunks = Math.ceil(sizeBytes / chunkSize);
 
-  // Create mutable copy for planning
-  const workerPool = aliveWorkers.map((w) => ({ ...w }));
+  // Use Map for fast lookup and freeBytes tracking
+  const workerMap = new Map(
+    aliveWorkers.map((w) => [w.id, { id: w.id, freeBytes: w.freeBytes }])
+  );
 
   const chunks: ChunkPlan[] = [];
+
   for (let i = 0; i < numChunks; i++) {
     const id = `${filename}_part${i}_${uuidv4().slice(0, 8)}`;
     const thisChunkSize =
       i === numChunks - 1 ? sizeBytes - i * chunkSize : chunkSize;
 
-    // Sort workers by available freeBytes
-    workerPool.sort((a, b) => b.freeBytes - a.freeBytes);
-    const chosen = workerPool.slice(0, replicationFactor).map((w) => w.id);
+    const chosenWorkers = chooseWorkersForChunk(
+      thisChunkSize,
+      workerMap,
+      replicationFactor
+    );
 
-    if (chosen.length < replicationFactor) {
+    if (chosenWorkers.length < replicationFactor) {
       throw new Error(
-        `Insufficient workers for replication: needed ${replicationFactor}, got ${chosen.length}`
+        `Insufficient workers for replication: needed ${replicationFactor}, got ${chosenWorkers.length}`
       );
     }
 
-    // Deduct used space
-    chosen.forEach((id) => {
-      const w = workerPool.find((x) => x.id === id);
-      if (w) w.freeBytes -= thisChunkSize;
+    chunks.push({
+      id,
+      size: thisChunkSize,
+      workers: chosenWorkers,
+      index: i,
     });
-
-    chunks.push({ id, size: thisChunkSize, workers: chosen, index: i });
   }
 
   const plan: FilePlan = {
@@ -127,6 +217,7 @@ export function planFileChunks(
     chunks,
     createdAt: Date.now(),
   };
+
   mappingStore.saveFilePlan(plan);
   return plan;
 }
