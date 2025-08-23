@@ -1,5 +1,21 @@
 //if you have any files or directories to ignore, list them here, it will recursively ignore all files and directories with these names
 
-node_modules
-.env*
-dist
+# Node.js
+node_modules/
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Env
+.env
+
+# Editor/OS files
+.DS_Store
+*.swp
