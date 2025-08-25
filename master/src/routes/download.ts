@@ -5,10 +5,10 @@ import { mappingStore } from "../services/mappingStore";
 const router = express.Router();
 
 /**
- * GET /getChunkInfo?filename=...
+ * GET /download?filename=...
  * returns the stored FilePlan for the given filename
  */
-router.get("/getChunkInfo", (req, res) => {
+router.get("/download", (req, res) => {
   const { filename } = req.query;
   if (!filename || typeof filename !== "string") {
     return res.status(400).json({ error: "filename query param required" });
