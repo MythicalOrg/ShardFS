@@ -3,7 +3,7 @@ import { mappingStore } from "../services/mappingStore";
 
 const router = Router();
 
-router.get("/getAllFiles", (req: Request, res: Response) => {
+router.get("/getallfiles", (req: Request, res: Response) => {
   try {
     const files = mappingStore.listFiles(); // Array<FilePlan>
 

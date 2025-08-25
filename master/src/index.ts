@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import registerRoute from "./routes/register";
 import download from "./routes/download";
-import getAllFiles from "./routes/getAllFilesinfo";
+import getAllFiles from "./routes/getAllFilesInfo";
 // import { serveDashboard } from "./middleware/serveDashboard";
 import { attachWebsocket } from "./ws/wsServer";
 import { PORT } from "./config/constants";
