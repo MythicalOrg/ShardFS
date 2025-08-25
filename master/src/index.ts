@@ -1,10 +1,10 @@
-
 import express from "express";
 import http from "http";
 import bodyParser from "body-parser";
 import cors from "cors";
 import registerRoute from "./routes/register";
-import getChunkInfoRoute from "./routes/getChunkInfo";
+import download from "./routes/download";
+import getAllFiles from "./routes/getAllFilesinfo";
 // import { serveDashboard } from "./middleware/serveDashboard";
 import { attachWebsocket } from "./ws/wsServer";
 import { PORT } from "./config/constants";
@@ -18,8 +18,9 @@ app.use(bodyParser.json({ limit: "10mb" }));
 app.use(cors());
 
 // routes
-app.use(registerRoute);
-app.use(getChunkInfoRoute);
+app.use("/api", registerRoute);
+app.use("/api", download);
+app.use("/api", getAllFiles);
 
 // serve react dashboard - expects build in /react-build
 // serveDashboard(app, path.join(process.cwd(), "react-build"));
