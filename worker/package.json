@@ -1,0 +1,30 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "ShardFS Worker Node - Stores and serves file chunks",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc -b",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["storage", "distributed", "worker"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.18.3",
+    "uuid": "^11.1.0",
+    "dotenv": "^17.2.1",
+    "cors": "^2.8.5",
+    "axios": "^1.11.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/ws": "^8.18.1",
+    "@types/cors": "^2.8.19",
+    "@types/node": "^24.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}
