@@ -23,6 +23,7 @@ router.post("/register", async (req, res) => {
 
     const plan = planFileChunks(filename, sizeNum);
     log("Planned file:", filename, "chunks:", plan.chunks.length);
+    console.log(plan, plan.chunks.map(chunk => chunk.workers))
     return res.json({ plan });
   } catch (err: any) {
     if (err.message.includes("No alive workers")) {

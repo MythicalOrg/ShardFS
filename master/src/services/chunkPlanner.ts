@@ -9,7 +9,7 @@ import { FilePlan, ChunkPlan } from "../models/types";
 import { mappingStore } from "./mappingStore";
 import { v4 as uuidv4 } from "uuid";
 
-const MIN_CHUNK_SIZE = 16 * MB;
+const MIN_CHUNK_SIZE = 8 * MB;
 const MAX_CHUNK_SIZE = 64 * MB;
 
 /**
@@ -186,7 +186,7 @@ export function planFileChunks(
   const chunks: ChunkPlan[] = [];
 
   for (let i = 0; i < numChunks; i++) {
-    const id = `${filename}_part${i}_${uuidv4().slice(0, 8)}`;
+    const id = `${filename}_part${i}`;
     const thisChunkSize =
       i === numChunks - 1 ? sizeBytes - i * chunkSize : chunkSize;
 
