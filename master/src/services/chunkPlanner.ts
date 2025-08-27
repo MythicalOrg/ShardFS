@@ -7,22 +7,16 @@ import { MB, DEFAULT_RF } from "../config/constants";
 import { workerManager } from "./workerManager";
 import { FilePlan, ChunkPlan } from "../models/types";
 import { mappingStore } from "./mappingStore";
-import { v4 as uuidv4 } from "uuid";
 
-const MIN_CHUNK_SIZE = 8 * MB;
-const MAX_CHUNK_SIZE = 64 * MB;
+const MIN_CHUNK_SIZE = 1024 * 178; // 256 KB
+const MAX_CHUNK_SIZE = 1024 * 1024 * 64; // 64 MB
 
-/**
- * Dynamically determine chunk size based on file size and worker count.
- * Target: ~2 chunks per worker, within min/max bounds.
- */
-export const decideChunkSize = (
-  fileSizeBytes: number,
-  workerCount: number
-): number => {
-  const desiredChunks = Math.min(100, Math.max(1, Math.floor(workerCount * 2))); // target ~2 chunks per worker
-  const size = fileSizeBytes / desiredChunks;
-  return Math.min(MAX_CHUNK_SIZE, Math.max(MIN_CHUNK_SIZE, size));
+export const decideChunkSize = (fileSizeBytes: number): number => {
+  const desiredChunks = Math.max(1, Math.floor(fileSizeBytes / MAX_CHUNK_SIZE));
+  const chunks = desiredChunks === 0 ? 1 : desiredChunks;
+  let size = fileSizeBytes / chunks;
+  size = Math.max(MIN_CHUNK_SIZE, Math.min(MAX_CHUNK_SIZE, size));
+  return Math.ceil(size);
 };
 
 /**
@@ -175,7 +169,7 @@ export function planFileChunks(
   const aliveWorkers = workerManager.getAliveWorkers();
   if (aliveWorkers.length === 0) throw new Error("No alive workers available");
 
-  const chunkSize = decideChunkSize(sizeBytes, aliveWorkers.length);
+  const chunkSize = decideChunkSize(sizeBytes);
   const numChunks = Math.ceil(sizeBytes / chunkSize);
 
   // Use Map for fast lookup and freeBytes tracking
