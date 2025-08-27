@@ -66,7 +66,7 @@ class WorkerNode {
     
     // Parse raw bodies for file chunks (up to 100MB)
     this.app.use(bodyParser.raw({ 
-      limit: "100mb",
+      limit: "1024mb", // 1 GB
       type: "application/octet-stream"
     }));
     
