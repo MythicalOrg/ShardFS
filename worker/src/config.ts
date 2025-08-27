@@ -6,7 +6,7 @@ dotenv.config();
 
 export function getConfig() {
   // Get worker port from env or use default
-  const PORT = process.env.WORKER_PORT ? parseInt(process.env.WORKER_PORT) : 8000;
+  const PORT = process.env.WORKER_PORT ? parseInt(process.env.WORKER_PORT) : 8001;
   
   // Get master URL from env or use default
   const MASTER_URL = process.env.MASTER_URL || "http://localhost:9000";

@@ -22,7 +22,7 @@ class WorkerNode {
     this.config = getConfig();
     
     // Generate unique worker ID (this will be our identity)
-    this.workerId = createWorkerId();
+    this.workerId = createWorkerId(this.config.PORT);
     
     // Create Express app for HTTP endpoints
     this.app = express();

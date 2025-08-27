@@ -16,6 +16,7 @@ export default async function upload(filepath: string): Promise<void> {
 
   console.log(`Uploading ${filename} (${size} bytes)`);
 
+
   const plan: FilePlan = await requestUploadPlan(filename, size);
   console.log(`→ chunkSize=${plan.chunkSize}, numChunks=${plan.chunks.length}`);
 

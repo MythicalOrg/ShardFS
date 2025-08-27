@@ -152,7 +152,7 @@ class StorageService {
 
   // Private helper methods
   private getChunkPath(chunkId: string): string {
-    return path.join(this.storageDir, `${chunkId}.chunk`);
+    return path.join(this.storageDir, `${chunkId}`);
   }
 
   private async loadMetadata(): Promise<void> {

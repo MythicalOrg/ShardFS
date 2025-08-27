@@ -1,14 +1,21 @@
 import { v4 as uuidv4 } from "uuid";
 import os from "os";
 
-// Generate a unique worker ID
-// We combine hostname with a UUID to make it both readable and unique
-export function createWorkerId(): string {
-  const hostname = os.hostname();
-  const uuid = uuidv4().slice(0, 8); // Take first 8 chars of UUID
-  
-  // Format: hostname-uuid (e.g., "mycomputer-a1b2c3d4")
-  return `${hostname}-${uuid}`;
+// Generate a worker ID in the format ip:port
+export function createWorkerId(port: number | string): string {
+  // Get the first non-internal IPv4 address
+  const interfaces = os.networkInterfaces();
+  let ip = "localhost";
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        ip = iface.address;
+        break;
+      }
+    }
+    if (ip !== "localhost") break;
+  }
+  return `${ip}:${port}`;
 }
 
 // Alternative: if you want just a simple UUID
