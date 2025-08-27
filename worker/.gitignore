@@ -97,6 +97,7 @@ Thumbs.db
 
 # Chunk storage (optional - remove if you want to track chunks)
 chunks/
+chunks*/
 *.chunk
 
 # Test files (optional - remove if you want to track test data)
