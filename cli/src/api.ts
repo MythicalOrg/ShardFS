@@ -9,11 +9,10 @@ const api = axios.create({
 });
 
 function extractPlan(data: any): FilePlan {
-  const plan = data?.plan ?? data;
-  if (!plan || !Array.isArray(plan.chunks)) {
-    throw new Error("Malformed plan response: missing 'chunks' array");
+  if (!data?.plan || !Array.isArray(data.plan.chunks)) {
+    throw new Error("Malformed plan response: missing 'plan' or 'plan.chunks'");
   }
-  return plan;
+  return data.plan;
 }
 
 export async function requestUploadPlan(filename: string, size: number): Promise<FilePlan> {
