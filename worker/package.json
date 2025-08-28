@@ -8,22 +8,27 @@
     "build": "tsc -b",
     "start": "node dist/index.js"
   },
-  "keywords": ["storage", "distributed", "worker"],
+  "keywords": [
+    "storage",
+    "distributed",
+    "worker"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.1.0",
-    "ws": "^8.18.3",
-    "uuid": "^11.1.0",
-    "dotenv": "^17.2.1",
+    "axios": "^1.11.0",
+    "check-disk-space": "^3.4.0",
     "cors": "^2.8.5",
-    "axios": "^1.11.0"
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/ws": "^8.18.1",
     "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
+    "@types/ws": "^8.18.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
   }

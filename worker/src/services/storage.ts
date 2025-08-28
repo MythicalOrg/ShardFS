@@ -115,8 +115,8 @@ class StorageService {
     }
   }
 
-  // Get storage statistics
-  getStorageStats(): { totalChunks: number; totalSize: number; freeSpace: number } {
+  // Get storage statistics (now async!)
+  async getStorageStats(): Promise<{ totalChunks: number; totalSize: number; freeSpace: number }> {
     let totalSize = 0;
     
     // Calculate total size of all chunks
@@ -124,9 +124,8 @@ class StorageService {
       totalSize += chunk.size;
     }
 
-    // Get free space on disk
-    const stats = fs.statSync(this.storageDir);
-    const freeSpace = this.getFreeDiskSpace();
+    // Get free space on disk (now async)
+    const freeSpace = await this.getFreeDiskSpace();
 
     return {
       totalChunks: this.chunks.size,
@@ -185,9 +184,10 @@ class StorageService {
     }
   }
 
-  private getFreeDiskSpace(): number {
+  // Now async!
+  private async getFreeDiskSpace(): Promise<number> {
     try {
-      const spaceInfo = getDiskSpaceInfo(this.storageDir);
+      const spaceInfo = await getDiskSpaceInfo(this.storageDir);
       log(`Disk space - Free: ${formatBytes(spaceInfo.free)}, Total: ${formatBytes(spaceInfo.total)}`);
       return spaceInfo.free;
     } catch (err) {
@@ -205,12 +205,12 @@ export async function setupStorage(): Promise<void> {
   await storageService.initialize();
 }
 
-// Export storage service methods
+// Export storage service methods (now async for getStorageStats)
 export const storage = {
   saveChunk: storageService.saveChunk.bind(storageService),
   getChunk: storageService.getChunk.bind(storageService),
   deleteChunk: storageService.deleteChunk.bind(storageService),
-  getStorageStats: storageService.getStorageStats.bind(storageService),
+  getStorageStats: storageService.getStorageStats.bind(storageService), // now async!
   getAllChunkIds: storageService.getAllChunkIds.bind(storageService),
   hasChunk: storageService.hasChunk.bind(storageService),
   getChunkInfo: storageService.getChunkInfo.bind(storageService)

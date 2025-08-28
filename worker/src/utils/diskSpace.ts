@@ -1,38 +1,20 @@
-import fs from "fs";
+import checkDiskSpace from "check-disk-space";
+import path from "path";
 import { log, warn } from "./logger";
 
-// Utility to get actual disk space information
-// This is a more realistic implementation than the placeholder
-
-export function getDiskSpaceInfo(path: string): { free: number; total: number; used: number } {
+// Utility to get actual disk space information using check-disk-space
+export async function getDiskSpaceInfo(storagePath: string): Promise<{ free: number; total: number; used: number }> {
   try {
-    // Get stats for the directory
-    const stats = fs.statSync(path);
-    
-    // For now, we'll use a simplified approach
-    // In production, you'd use a library like 'diskusage' for accurate disk space
-    
-    // Check if we can write to the directory
-    const testFile = `${path}/.space-test-${Date.now()}`;
-    try {
-      fs.writeFileSync(testFile, "test");
-      fs.unlinkSync(testFile);
-    } catch (err) {
-      warn("Cannot write to storage directory:", err);
-      return { free: 0, total: 0, used: 0 };
+    // On Windows, check-disk-space expects a drive root like "C:\"
+    let diskPath = storagePath;
+    if (process.platform === "win32") {
+      // Resolve to absolute path, then get the drive letter root (e.g. "C:\")
+      const abs = path.resolve(storagePath);
+      diskPath = abs.slice(0, 3); // "C:\" from "C:\Users\..."
     }
-    
-    // Estimate available space (this is a simplified approach)
-    // In reality, you'd want to use proper disk space checking
-    const estimatedFree = 1024 * 1024 * 1024 * 5; // 5GB estimate
-    const estimatedTotal = 1024 * 1024 * 1024 * 10; // 10GB estimate
-    const estimatedUsed = estimatedTotal - estimatedFree;
-    
-    return {
-      free: estimatedFree,
-      total: estimatedTotal,
-      used: estimatedUsed
-    };
+    const { free, size: total } = await checkDiskSpace(diskPath);
+    const used = total - free;
+    return { free, total, used };
   } catch (err) {
     warn("Failed to get disk space info:", err);
     return { free: 0, total: 0, used: 0 };
@@ -40,8 +22,8 @@ export function getDiskSpaceInfo(path: string): { free: number; total: number; u
 }
 
 // Check if we have enough space for a chunk
-export function hasEnoughSpace(path: string, requiredBytes: number): boolean {
-  const spaceInfo = getDiskSpaceInfo(path);
+export async function hasEnoughSpace(path: string, requiredBytes: number): Promise<boolean> {
+  const spaceInfo = await getDiskSpaceInfo(path);
   return spaceInfo.free >= requiredBytes;
 }
 

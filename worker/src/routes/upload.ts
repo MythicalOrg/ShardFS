@@ -39,7 +39,7 @@ export function setupUploadRoute(app: any): void {
       log(`Received chunk ${chunkId} (${chunkData.length} bytes) for file ${filename}`);
 
       // Check if we have enough space
-      const stats = storage.getStorageStats();
+      const stats = await storage.getStorageStats();
       if (stats.freeSpace < chunkData.length) {
         return res.status(507).json({
           error: "Insufficient storage space",

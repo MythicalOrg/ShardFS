@@ -127,7 +127,7 @@ export function setupDownloadRoute(app: any): void {
         };
       });
 
-      const stats = storage.getStorageStats();
+      const stats = await storage.getStorageStats();
 
       res.json({
         workerId: require("os").hostname(),

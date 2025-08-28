@@ -18,6 +18,7 @@ export default async function upload(filepath: string): Promise<void> {
 
 
   const plan: FilePlan = await requestUploadPlan(filename, size);
+  console.log("plan:", plan)
   console.log(`→ chunkSize=${plan.chunkSize}, numChunks=${plan.chunks.length}`);
 
   // for each chunk, stream to each assigned worker

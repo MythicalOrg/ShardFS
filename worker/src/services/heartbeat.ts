@@ -76,14 +76,14 @@ class HeartbeatService {
     }, this.heartbeatInterval);
   }
 
-  private sendHeartbeat(): void {
+  private async sendHeartbeat(): Promise<void> {
     if (!this.ws || !this.isConnected) {
       return;
     }
 
     try {
       // Get current storage stats
-      const stats = storage.getStorageStats();
+      const stats = await storage.getStorageStats();
       
       // Prepare heartbeat payload
       const heartbeat = {
