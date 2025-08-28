@@ -1,0 +1,30 @@
+{
+  "name": "shardfs-node-sdk",
+  "version": "1.0.0",
+  "description": "NodeJs SDK for interacting with the ShardFS distributed file system",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "dfs",
+    "distributed",
+    "storage",
+    "sdk",
+    "shardfs"
+  ],
+  "author": "Piyush Mishra",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^24.3.0"
+  },
+  "dependencies": {
+    "axios": "^1.11.0"
+  }
+}
