@@ -5,7 +5,7 @@ import cors from "cors";
 import registerRoute from "./routes/register";
 import download from "./routes/download";
 import getAllFiles from "./routes/getAllFilesInfo";
-// import { serveDashboard } from "./middleware/serveDashboard";
+import { serveDashboard } from "./middleware/serveDashboard";
 import { attachWebsocket } from "./ws/wsServer";
 import { PORT } from "./config/constants";
 import { log } from "./utils/logger";
@@ -23,7 +23,7 @@ app.use("/api", download);
 app.use("/api", getAllFiles);
 
 // serve react dashboard - expects build in /react-build
-// serveDashboard(app, path.join(process.cwd(), "react-build"));
+serveDashboard(app, path.join(process.cwd(), "src/react-build/dist"));
 
 const server = http.createServer(app);
 

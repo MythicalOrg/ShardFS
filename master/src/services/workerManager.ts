@@ -1,39 +1,7 @@
-// keeps workers list and heartbeats
-
 import { WorkerInfo, WorkerId } from "../models/types";
 import { log } from "../utils/logger";
 import { nowMs } from "../utils/time";
 import { HEARTBEAT_WINDOW_MS } from "../config/constants";
-
-/**
- * WorkerManager
- *
- * Purpose:
- * - Tracks all workers connected to the Master Node.
- * - Maintains real-time cluster state using heartbeats.
- *
- * Key Responsibilities:
- * 1. upsertHeartbeat(payload):
- *    - Insert or update a worker's info when a heartbeat is received.
- *    - Updates fields like freeBytes, totalBytes, metadata, and lastHeartbeat timestamp.
- *
- * 2. getAllWorkers():
- *    - Returns all workers regardless of liveness.
- *
- * 3. getWorker(id):
- *    - Fetch a specific worker by ID.
- *
- * 4. getAliveWorkers():
- *    - Returns only workers that sent a heartbeat within HEARTBEAT_WINDOW_MS.
- *    - Used to ensure tasks are assigned only to active workers.
- *
- * 5. removeWorker(id):
- *    - Manually remove a worker from the registry.
- *
- * Why heartbeat upsert matters:
- * - Without it, Master cannot track worker availability or free space.
- * - Critical for replication, load balancing, and fault tolerance.
- */
 
 export function createWorkerManager() {
   const workers: Map<WorkerId, WorkerInfo> = new Map();
@@ -50,6 +18,7 @@ export function createWorkerManager() {
       totalBytes: payload.totalBytes,
       metadata: payload.metadata || {},
       lastHeartbeat: nowMs(),
+      status: "alive", // always alive on heartbeat
     };
     workers.set(id, w);
     log("Heartbeat upsert:", id, `freeBytes=${w.freeBytes}`);
@@ -63,35 +32,35 @@ export function createWorkerManager() {
   const getAliveWorkers = (): WorkerInfo[] => {
     const cutoff = nowMs() - HEARTBEAT_WINDOW_MS;
     return Array.from(workers.values()).filter(
-      (w) => w.lastHeartbeat >= cutoff
+      (w) => w.lastHeartbeat >= cutoff && w.status === "alive"
     );
+  };
+
+  const markDeadIfExpired = (): boolean => {
+    const cutoff = nowMs() - HEARTBEAT_WINDOW_MS;
+    let changed = false;
+    for (const w of workers.values()) {
+      if (w.status === "alive" && w.lastHeartbeat < cutoff) {
+        w.status = "dead";
+        changed = true;
+        log("Marked worker as dead:", w.id);
+      }
+    }
+    return changed;
   };
 
   const removeWorker = (id: WorkerId) => {
     workers.delete(id);
   };
 
-  /*
-The function below is not necessary in initial phase, it can be used later on 
-It Removes the inactive workers
-
-   const cleanupStaleOlderThan = (ms: number) => {
-     const cutoff = nowMs() - ms;
-     for (const [id, w] of workers.entries()) {
-       if (w.lastHeartbeat < cutoff) {
-         workers.delete(id);
-         log("Removed stale worker:", id);
-       }
-     }
-   };
-*/
-
   return {
     upsertHeartbeat,
     getAllWorkers,
     getWorker,
     getAliveWorkers,
-    removeWorker
+    markDeadIfExpired,
+    removeWorker,
   };
 }
+
 export const workerManager = createWorkerManager();
