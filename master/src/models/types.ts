@@ -9,6 +9,7 @@ export interface WorkerInfo {
   totalBytes?: number;
   lastHeartbeat: number; // epoch ms
   metadata?: Record<string, any>;
+  status: "alive" | "dead";
 }
 
 export interface ChunkPlan {

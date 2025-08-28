@@ -1,21 +1,15 @@
-// import express from "express";
-// import path from "path";
+import express from "express";
+import path from "path";
 
-// export function serveDashboard(
-//   app: express.Application,
-//   reactBuildPath = path.join(process.cwd(), "react-build")
-// ) {
-//   // serve static assets
-//   app.use(
-//     "/dashboard/",
-//     express.static(path.join(reactBuildPath, "static"))
-//   );
+export function serveDashboard(
+  app: express.Application,
+  reactBuildPath = path.join(process.cwd(), "src/react-build/dist")
+) {
+  // Serve React build assets
+  app.use("/dashboard", express.static(reactBuildPath));
 
-//   // wildcard route - map /dashboard/* to react-build/index.html
-//   app.get("/dashboard/{*path}", (req, res) => {
-//     res.sendFile(path.join(reactBuildPath, "index.html"));
-//   });
-
-// }
-
-// // Work to be done in this for dashboard enhancements
+  // Wildcard for React router
+  app.get("/dashboard/{*path}", (req, res) => {
+    res.sendFile(path.join(reactBuildPath, "index.html"));
+  });
+}
