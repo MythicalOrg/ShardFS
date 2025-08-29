@@ -18,6 +18,10 @@ export function createMappingStore() {
     return Array.from(files.values());
   };
 
+  const removeFilePlan = (filename: string) => {
+    return files.delete(filename);
+  };
+
   // placeholder for persistence logic in future
   // e.g., save to DB or reload from DB
 
@@ -25,6 +29,7 @@ export function createMappingStore() {
     saveFilePlan,
     getFilePlan,
     listFiles,
+    removeFilePlan,
   };
 }
 

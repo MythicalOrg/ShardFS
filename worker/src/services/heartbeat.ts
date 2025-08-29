@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 import { log, error, warn } from "../utils/logger";
 import { storage } from "./storage";
+import os from "os";
 
 // Heartbeat service - keeps master updated about worker status
 class HeartbeatService {
@@ -11,11 +12,18 @@ class HeartbeatService {
   private reconnectInterval: number = 5000; // 5 seconds
   private isConnected: boolean = false;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private config: any;
 
-  constructor(workerId: string, masterUrl: string, heartbeatInterval: number) {
+  constructor(
+    workerId: string,
+    masterUrl: string,
+    heartbeatInterval: number,
+    config: any
+  ) {
     this.workerId = workerId;
     this.masterUrl = masterUrl;
     this.heartbeatInterval = heartbeatInterval;
+    this.config = config;
   }
 
   async start(): Promise<void> {
@@ -27,18 +35,18 @@ class HeartbeatService {
     try {
       // Create WebSocket connection to master
       this.ws = new WebSocket(this.masterUrl);
-      
+
       // Setup event handlers
       this.ws.on("open", () => {
         log("Connected to master");
         this.isConnected = true;
-        
+
         // Clear any reconnect timer
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
-        
+
         // Start sending heartbeats
         this.startHeartbeat();
       });
@@ -57,7 +65,6 @@ class HeartbeatService {
         error("WebSocket error:", err);
         this.isConnected = false;
       });
-
     } catch (err) {
       error("Failed to connect to master:", err);
       this.scheduleReconnect();
@@ -67,7 +74,7 @@ class HeartbeatService {
   private startHeartbeat(): void {
     // Send initial heartbeat immediately
     this.sendHeartbeat();
-    
+
     // Then send heartbeats at regular intervals
     setInterval(() => {
       if (this.isConnected) {
@@ -84,7 +91,7 @@ class HeartbeatService {
     try {
       // Get current storage stats
       const stats = await storage.getStorageStats();
-      
+
       // Prepare heartbeat payload
       const heartbeat = {
         type: "worker:heartbeat",
@@ -96,15 +103,17 @@ class HeartbeatService {
           metadata: {
             totalChunks: stats.totalChunks,
             totalSize: stats.totalSize,
-            hostname: require("os").hostname()
-          }
-        }
+            hostname: require("os").hostname(),
+          },
+        },
       };
 
       // Send heartbeat to master
       this.ws.send(JSON.stringify(heartbeat));
-      
-      log(`Sent heartbeat - freeBytes: ${stats.freeSpace}, chunks: ${stats.totalChunks}`);
+
+      log(
+        `Sent heartbeat - freeBytes: ${stats.freeSpace}, chunks: ${stats.totalChunks}`
+      );
     } catch (err) {
       error("Failed to send heartbeat:", err);
     }
@@ -113,17 +122,17 @@ class HeartbeatService {
   private handleMessage(data: WebSocket.Data): void {
     try {
       const message = JSON.parse(data.toString());
-      
+
       switch (message.type) {
         case "master:info":
           log("Received master info:", message.data);
           break;
-          
+
         case "workers:list":
           // Master sent us list of workers (for debugging)
           log(`Master reports ${message.data.length} workers`);
           break;
-          
+
         default:
           log("Received unknown message type:", message.type);
       }
@@ -145,11 +154,16 @@ class HeartbeatService {
     }, this.reconnectInterval);
   }
 
+  // private getWorkerHost(): string {
+  //   // Get worker host from config or use localhost
+  //   // In production, this should be the actual IP address
+  //   const port = process.env.WORKER_PORT || "8000";
+  //   return `localhost:${port}`;
+  // }
+
   private getWorkerHost(): string {
-    // Get worker host from config or use localhost
-    // In production, this should be the actual IP address
-    const port = process.env.WORKER_PORT || "8000";
-    return `localhost:${port}`;
+    // Use the WORKER_HOST from config/env
+    return `http://${process.env.WORKER_HOST || this.config.WORKER_HOST}`;
   }
 
   stop(): void {
@@ -157,32 +171,36 @@ class HeartbeatService {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.isConnected = false;
     log("Heartbeat service stopped");
   }
 }
 
-// Export setup function
-export async function setupHeartbeat(workerId: string, config: any): Promise<void> {
+export async function setupHeartbeat(
+  workerId: string,
+  config: any
+): Promise<void> {
   const heartbeatService = new HeartbeatService(
     workerId,
     config.MASTER_WS_URL,
-    config.HEARTBEAT_INTERVAL_MS
+    config.HEARTBEAT_INTERVAL_MS,
+    config
   );
-  
+
   await heartbeatService.start();
-  
+  await heartbeatService.start();
+
   // Handle graceful shutdown
   process.on("SIGINT", () => {
     heartbeatService.stop();
   });
-  
+
   process.on("SIGTERM", () => {
     heartbeatService.stop();
   });

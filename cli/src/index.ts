@@ -4,6 +4,7 @@ import upload from "./commands/upload";
 import download from "./commands/download";
 import list from "./commands/list";
 import dashboard from "./commands/dashboard";
+import deleteFile from "./commands/delete";
 
 const program = new Command();
 
@@ -57,7 +58,16 @@ program
     }
   });
 
-
+program
+  .command("delete")
+  .argument("<filename>", "File name to delete from ShardFS")
+  .action(async (filename: string) => {
+    try {
+      await deleteFile(filename);
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  });
 
 // Parse args - in short, it helps to process the command line arguments and execute the appropriate command
 program.parse(process.argv);
