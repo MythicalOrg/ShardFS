@@ -25,4 +25,5 @@ export interface FilePlan {
   chunkSize: number;
   chunks: ChunkPlan[];
   createdAt: number;
+  status?: "active" | "deleting" | "deleted";
 }

@@ -90,7 +90,7 @@ The system follows a **Master–Worker Architecture** with **WebSocket-based com
 ```bash
 cd master
 npm install
-npm start
+npm run dev
 ```
 ### 2️⃣ Start Worker Nodes
 
@@ -98,7 +98,7 @@ npm start
 cd worker
 npm install
 npm run dev //8000 default
-npm run dev 8001
+npm run dev 8001 //(8001 , 8002, ...)
 ```
 ### 3️⃣ Upload a File (CLI)
 

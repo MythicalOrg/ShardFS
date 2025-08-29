@@ -1,4 +1,3 @@
-
 export type WorkerId = string;
 
 export interface ChunkPlan {
@@ -14,19 +13,18 @@ export interface FilePlan {
   chunkSize: number;
   chunks: ChunkPlan[];
   createdAt: number;
+  status?: "active" | "deleting" | "deleted";
 }
 
 export interface ListFiles {
-    totalFiles: number;
-    files: {
-        filename: string;
-        size: number;
-        chunkSize: number;
-        chunkCount: number;
-        replicationFactor: number;
-        createdAt: number;
-        chunks: ChunkPlan[];
-    }[];
+  totalFiles: number;
+  files: {
+    filename: string;
+    size: number;
+    chunkSize: number;
+    chunkCount: number;
+    replicationFactor: number;
+    createdAt: number;
+    chunks: ChunkPlan[];
+  }[];
 }
-
-

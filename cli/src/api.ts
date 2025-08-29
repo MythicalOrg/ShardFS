@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { MASTER_URL } from "./config";
 import type { FilePlan, ListFiles } from "./types";
@@ -15,7 +14,10 @@ function extractPlan(data: any): FilePlan {
   return data.plan;
 }
 
-export async function requestUploadPlan(filename: string, size: number): Promise<FilePlan> {
+export async function requestUploadPlan(
+  filename: string,
+  size: number
+): Promise<FilePlan> {
   const res = await api.post("/api/register", { filename, size });
   return extractPlan(res.data);
 }
@@ -27,5 +29,12 @@ export async function requestDownloadMeta(filename: string): Promise<FilePlan> {
 
 export async function listFiles(): Promise<ListFiles> {
   const res = await api.get("/api/getallfiles");
+  return res.data;
+}
+
+export async function requestDeleteFile(
+  filename: string
+): Promise<{ success: boolean; message?: string }> {
+  const res = await api.delete(`/api/delete/${encodeURIComponent(filename)}`);
   return res.data;
 }
