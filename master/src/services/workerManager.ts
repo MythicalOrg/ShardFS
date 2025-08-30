@@ -1,7 +1,8 @@
 import { WorkerInfo, WorkerId } from "../models/types";
-import { log } from "../utils/logger";
-import { nowMs } from "../utils/time";
 import { HEARTBEAT_WINDOW_MS } from "../config/constants";
+import { log, warn } from "../utils/logger";
+import { nowMs } from "../utils/time";
+
 
 export function createWorkerManager() {
   const workers: Map<WorkerId, WorkerInfo> = new Map();
@@ -21,7 +22,7 @@ export function createWorkerManager() {
       status: "alive", // always alive on heartbeat
     };
     workers.set(id, w);
-    log("Heartbeat upsert:", id, `freeBytes=${w.freeBytes}`);
+    log("[workerManager] Heartbeat upsert:", id, `freeBytes=${w.freeBytes}`);
     return w;
   };
 
@@ -36,21 +37,34 @@ export function createWorkerManager() {
     );
   };
 
-  const markDeadIfExpired = (): boolean => {
+  const markDeadIfExpired = (): WorkerId[] => {
     const cutoff = nowMs() - HEARTBEAT_WINDOW_MS;
-    let changed = false;
+    const newlyDead: WorkerId[] = [];
+
     for (const w of workers.values()) {
       if (w.status === "alive" && w.lastHeartbeat < cutoff) {
         w.status = "dead";
-        changed = true;
+        newlyDead.push(w.id);
         log("Marked worker as dead:", w.id);
       }
     }
-    return changed;
+
+    return newlyDead;
+  };
+
+  const markAlive = (id: WorkerId) => {
+    const w = workers.get(id);
+    if (w) {
+      w.status = "alive";
+      w.lastHeartbeat = nowMs();
+      workers.set(id, w);
+      log(`[workerManager] Worker marked alive again: ${id}`);
+    }
   };
 
   const removeWorker = (id: WorkerId) => {
     workers.delete(id);
+    log(`[workerManager] Removed worker: ${id}`);
   };
 
   return {
@@ -59,6 +73,7 @@ export function createWorkerManager() {
     getWorker,
     getAliveWorkers,
     markDeadIfExpired,
+    markAlive, // ✅ new addition
     removeWorker,
   };
 }

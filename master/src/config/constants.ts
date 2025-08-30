@@ -10,3 +10,4 @@ export const HEARTBEAT_WINDOW_MS = 10_000; // 10 seconds => alive worker
 export const HEARTBEAT_INTERVAL_MS = 5_000; // expected worker heartbeat interval
 export const DEFAULT_RF = process.env.RF ? parseInt(process.env.RF) : 2; // replication factor
 export const MB = 1024 * 1024;
+export const REPLICATION_CANDIDATE_LIMIT = 10;
