@@ -7,7 +7,7 @@ import { setupStorage } from "./services/storage";
 import { setupHeartbeat } from "./services/heartbeat";
 import { setupUploadRoute } from "./routes/upload";
 import { setupDownloadRoute } from "./routes/download";
-import { setupReReplicateRoute } from "./routes/reReplicate";
+// import { setupReReplicateRoute } from "./routes/reReplicate";
 import { setupReReplicateRouteV2 } from "./routes/reReplicateV2";
 import { log, error } from "./utils/logger";
 import { getConfig } from "./config";
@@ -94,7 +94,7 @@ class WorkerNode {
     setupDownloadRoute(this.app);
 
     // Setup re-replication endpoint for chunk replication
-    setupReReplicateRoute(this.app);
+    // setupReReplicateRoute(this.app);
 
     // Setup re-replication V2 endpoint (replication factor 2)
     setupReReplicateRouteV2(this.app);
