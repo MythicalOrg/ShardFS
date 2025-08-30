@@ -1,3 +1,4 @@
+// src/ws/wsServer.ts
 import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
 import { WS_PATH } from "../config/constants";
@@ -5,6 +6,7 @@ import { workerManager } from "../services/workerManager";
 import { log, warn } from "../utils/logger";
 import { nowMs } from "../utils/time";
 import { mappingStore } from "../services/mappingStore";
+import { handleDeadWorkers } from "../services/reReplication";
 
 // The "unknown" type refers to the initial state of any new WebSocket connection
 // before it identifies itself as either:
@@ -78,7 +80,7 @@ export function attachWebsocket(server: http.Server) {
     }
   }
 
-  function handleMessage(client: ConnectedClient, msg: any) {
+  async function handleMessage(client: ConnectedClient, msg: any) {
     const { type, data } = msg;
 
     if (type === "worker:heartbeat") {
@@ -86,8 +88,20 @@ export function attachWebsocket(server: http.Server) {
       client.type = "worker";
       client.id = id;
 
-      const changed = workerManager.markDeadIfExpired();
-      if (changed) {
+      // Update worker heartbeat entry
+      workerManager.upsertHeartbeat({
+        id,
+        host,
+        freeBytes,
+        totalBytes,
+        metadata,
+        status: "alive",
+      });
+
+      // Check for newly dead workers (by heartbeat expiry)
+      const newlyDead = workerManager.markDeadIfExpired();
+
+      if (newlyDead.length > 0) {
         broadcastToDashboards({
           type: "cluster:update",
           data: {
@@ -95,16 +109,14 @@ export function attachWebsocket(server: http.Server) {
             files: mappingStore.listFiles(),
           },
         });
-      }
 
-      workerManager.upsertHeartbeat({
-        id,
-        host,
-        freeBytes,
-        totalBytes,
-        metadata,
-        status: "alive", // ✅ always mark alive on heartbeat
-      });
+        try {
+          await handleDeadWorkers(newlyDead);
+          // correct now: newlyDead is string[]
+        } catch (err) {
+          warn("Re-replication failed:", err);
+        }
+      }
 
       // broadcast latest state to dashboards
       broadcastToDashboards({
