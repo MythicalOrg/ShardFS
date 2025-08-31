@@ -58,9 +58,21 @@ export type WorkerHeartbeatMsg = {
   data: Worker; // same shape as Worker
 };
 
+// ✅ Add explicit WS infra messages
+export type PongMsg = {
+  type: "pong";
+};
+
+export type PingMsg = {
+  type: "ping";
+};
+
+// Extend WsMessage
 export type WsMessage =
   | ClusterSnapshotMsg
   | ClusterUpdateMsg
   | MasterInfoMsg
   | WorkersListMsg
-  | WorkerHeartbeatMsg;
+  | WorkerHeartbeatMsg
+  | PongMsg
+  | PingMsg;
