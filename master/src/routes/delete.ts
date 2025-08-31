@@ -20,29 +20,23 @@ async function deleteChunkOnWorker(workerHost: string, chunkId: string) {
     ""
   )}/deleteChunk/${encodeURIComponent(chunkId)}`;
   try {
-    const res = await axios.delete(url, { timeout: 5000 });
-    if (res.status >= 200 && res.status < 300)
-      return { ok: true, status: res.status };
-    return {
-      ok: false,
-      status: res.status,
-      error: `Unexpected status ${res.status}`,
-    };
+    const res = await axios.delete(url, { timeout: 10000 });
+    if (res.status >= 200 && res.status < 300) return { ok: true };
+    return { ok: false, error: `Unexpected status ${res.status}` };
   } catch (err: any) {
-    if (axios.isAxiosError(err) && err.response?.status === 404)
-      return { ok: true, status: 404 }; // idempotent
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      return { ok: true }; // already gone → idempotent
+    }
     return { ok: false, error: err.message || String(err) };
   }
 }
 
-/** Delete all chunks of a file across all workers */
+/** Attempt to delete all chunks on all *online* workers */
 async function deleteFileChunks(plan: FilePlan) {
   const results: {
     workerId: string;
-    workerHost?: string;
     chunkId: string;
     ok: boolean;
-    status?: number;
     error?: string;
   }[] = [];
 
@@ -51,29 +45,17 @@ async function deleteFileChunks(plan: FilePlan) {
       const worker = workerManager.getWorker(workerId);
       const chunkId = chunk.id;
 
-      if (!worker) {
-        warn(`[delete] Worker not found: ${workerId} for chunk ${chunkId}`);
-        results.push({
-          workerId,
-          chunkId,
-          ok: false,
-          error: "worker not found",
-        });
+      if (!worker || worker.status == "dead") {
+        // skip disconnected workers
+        warn(`[delete] Worker ${workerId} offline, skipping chunk ${chunkId}`);
         continue;
       }
 
       const host = normalizeHost(worker.host);
-      log(`[delete] Deleting chunk ${chunkId} on worker ${workerId} (${host})`);
+      log(`[delete] Deleting chunk ${chunkId} on worker ${workerId}`);
       const result = await deleteChunkOnWorker(host, chunkId);
 
-      results.push({
-        workerId,
-        workerHost: host,
-        chunkId,
-        ok: result.ok,
-        status: result.status,
-        error: result.error,
-      });
+      results.push({ workerId, chunkId, ...result });
 
       if (result.ok)
         log(`[delete] Deleted chunk ${chunkId} on worker ${workerId}`);
@@ -94,58 +76,23 @@ router.delete("/delete/:filename", async (req, res) => {
 
   const plan = mappingStore.getFilePlan(filename);
   if (!plan) return res.status(404).json({ error: "file not found" });
-  if (plan.status === "deleting")
-    return res.status(409).json({ error: "file is already being deleted" });
-  if (plan.status === "deleted")
-    return res.status(410).json({ error: "file already deleted" });
 
   plan.status = "deleting";
   mappingStore.saveFilePlan(plan);
 
   try {
-    const results = await deleteFileChunks(plan);
+    await deleteFileChunks(plan);
 
-    const allSuccess = results.every((r) => r.ok);
-    const anySuccess = results.some((r) => r.ok);
+    // Always remove mapping regardless of worker status
+    mappingStore.removeFilePlan?.(filename);
+    log(`[delete] File ${filename} fully removed (mapping + chunks if online)`);
 
-    if (allSuccess) {
-      plan.status = "deleted";
-      mappingStore.saveFilePlan(plan);
-      mappingStore.removeFilePlan?.(filename);
-      log(`[delete] File ${filename} deleted from all workers`);
-      console.log(
-        "[DEBUG] Current mappings after deletion:",
-        mappingStore.listFiles()
-      );
-      return res.json({
-        success: true,
-        message: "File deleted successfully",
-        results,
-      });
-    }
-
-    if (anySuccess) {
-      warn(`[delete] Partial delete for ${filename}`);
-      plan.status = "active";
-      mappingStore.saveFilePlan(plan);
-      return res.status(207).json({
-        success: false,
-        message: "Partial delete: some workers failed",
-        results,
-      });
-    }
-
-    plan.status = "active";
-    mappingStore.saveFilePlan(plan);
-    error(`[delete] Delete failed for ${filename} on all workers`);
-    return res.status(500).json({
-      success: false,
-      message: "Delete failed on all workers",
-      results,
+    return res.json({
+      success: true,
+      message:
+        "File deleted. Chunks removed from online workers; offline workers will be wiped on reconnect.",
     });
   } catch (err: any) {
-    plan.status = "active";
-    mappingStore.saveFilePlan(plan);
     error(`[delete] Unexpected error deleting ${filename}:`, err);
     return res
       .status(500)

@@ -81,8 +81,8 @@ The system follows a **Master–Worker Architecture** with **WebSocket-based com
 ## 📂 Project Structure
 - `/master → Master node service (metadata manager)`
 - `/worker → Worker node service (chunk storage)`
-- `/worker → Worker node service (chunk storage)`
-- `/sdk/node → Node.js SDK for programmatic use`
+- `/cli  → CLI client`
+- `/sdk → SDKs for programmatic use`
 
 ## 🚀 Usage
 
