@@ -27,15 +27,9 @@ import { FilePlan } from "../models/types";
  * - sourceHost is derived from workerManager.getWorker(sourceId).host
  * - target 'URL' used by worker routes should include protocol (normalize it)
  */
-
 // Ensure host includes protocol
 function normalizeHost(host: string): string {
   return host.startsWith("http") ? host : `http://${host}`;
-}
-
-function isWorkerAlive(workerId: string): boolean {
-  const w = workerManager.getWorker(workerId);
-  return !!w && w.status === "alive";
 }
 
 async function sendReReplicateRequest(
@@ -48,7 +42,7 @@ async function sendReReplicateRequest(
     const res = await axios.post(
       url,
       { chunkId, targets: targetUrls },
-      { timeout: 60_000 } // 60s
+      { timeout: 60_000 }
     );
     return { ok: true, response: res.data };
   } catch (err: any) {
@@ -57,10 +51,25 @@ async function sendReReplicateRequest(
   }
 }
 
+//efficient version, instead of checking alive workers for each chunk, we precompute alive workers, deadWorkers, and sort once
+
 export async function handleDeadWorkers(deadWorkerIds: string[]) {
   if (!deadWorkerIds || deadWorkerIds.length === 0) return;
 
   log(`[reReplication] Detected dead workers: ${deadWorkerIds.join(", ")}`);
+
+  const deadSet = new Set(deadWorkerIds);
+
+  // Precompute alive workers once
+  const aliveWorkers = workerManager
+    .getAllWorkers()
+    .filter((w) => w.status === "alive");
+  const aliveSet = new Set(aliveWorkers.map((w) => w.id));
+
+  // Pre-sort 
+  const sortedAliveWorkers = [...aliveWorkers].sort(
+    (a, b) => (b.freeBytes ?? 0) - (a.freeBytes ?? 0)
+  );
 
   const filePlans: FilePlan[] = mappingStore.listFiles();
 
@@ -68,11 +77,10 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
     let planModified = false;
 
     for (const chunk of plan.chunks) {
-      // If this chunk was hosted on any of the dead workers
-      const hadDead = chunk.workers.some((w) => deadWorkerIds.includes(w));
-      if (!hadDead) continue;
+      // Fast dead worker check
+      if (!chunk.workers.some((wid) => deadSet.has(wid))) continue;
 
-      const aliveReplicas = chunk.workers.filter(isWorkerAlive);
+      const aliveReplicas = chunk.workers.filter((wid) => aliveSet.has(wid));
       const aliveCount = aliveReplicas.length;
       const needed = Math.max(0, DEFAULT_RF - aliveCount);
 
@@ -81,15 +89,14 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
       );
 
       if (needed <= 0) {
-        // ✅ Do NOT delete dead worker mappings anymore
-        // Just log the current state
+        // Replication factor satisfied, nothing to do
         log(
-          `[reReplication] Replication factor already satisfied for chunk ${chunk.id}. Keeping dead worker IDs in mapping.`
+          `[reReplication] Replication factor satisfied for chunk ${chunk.id}. Keeping dead worker IDs in mapping.`
         );
         continue;
       }
 
-      // pick a source replica (first alive replica)
+      // No alive replicas, cannot re-replicate
       if (aliveReplicas.length === 0) {
         warn(
           `[reReplication] No alive replicas available for chunk ${chunk.id} (file=${plan.filename}). Manual intervention needed.`
@@ -97,19 +104,17 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
         continue;
       }
 
+      // Pick first alive replica as source
       const sourceWorkerId = aliveReplicas[0];
       const sourceWorker = workerManager.getWorker(sourceWorkerId);
       if (!sourceWorker) continue;
       const sourceHost = normalizeHost(sourceWorker.host);
 
-      // choose candidate targets
-      const allAlive = workerManager
-        .getAllWorkers()
-        .filter((w) => w.status === "alive");
-
-      const candidates = allAlive
-        .filter((w) => w.id !== sourceWorkerId && !chunk.workers.includes(w.id))
-        .sort((a, b) => (b.freeBytes ?? 0) - (a.freeBytes ?? 0))
+      // Pick candidate targets from pre-sorted list
+      const candidates = sortedAliveWorkers
+        .filter(
+          (w) => w.id !== sourceWorkerId && !chunk.workers.includes(w.id)
+        )
         .slice(0, REPLICATION_CANDIDATE_LIMIT);
 
       if (candidates.length === 0) continue;
@@ -118,16 +123,16 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
       const targetUrls = chosenTargets.map((w) => normalizeHost(w.host));
 
       log(
-        `[reReplication] Replicating chunk=${
-          chunk.id
-        } from ${sourceWorkerId} → ${chosenTargets.map((c) => c.id).join(", ")}`
+        `[reReplication] Replicating chunk=${chunk.id} from ${sourceWorkerId} → ${chosenTargets
+          .map((c) => c.id)
+          .join(", ")}`
       );
 
-      const {
-        ok,
-        response,
-        error: sendErr,
-      } = await sendReReplicateRequest(sourceHost, chunk.id, targetUrls);
+      const { ok, response, error: sendErr } = await sendReReplicateRequest(
+        sourceHost,
+        chunk.id,
+        targetUrls
+      );
 
       if (!ok) {
         error(
@@ -136,7 +141,7 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
         continue;
       }
 
-      // Add new workers to mapping (without removing dead ones)
+      // Update mapping with newly replicated targets
       const replicatedTargets: string[] = Array.isArray(response?.replicated)
         ? response.replicated.map((r: any) => r.target)
         : [];
@@ -150,7 +155,7 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
           );
 
         if (matched && !chunk.workers.includes(matched.id)) {
-          chunk.workers.push(matched.id); // ✅ Append only
+          chunk.workers.push(matched.id);
           planModified = true;
           log(
             `[reReplication] chunk ${chunk.id} now replicated to worker ${matched.id}`
@@ -166,7 +171,7 @@ export async function handleDeadWorkers(deadWorkerIds: string[]) {
         const mappingStr = chunk.workers
           .map((wid) => {
             const w = workerManager.getWorker(wid);
-            return w ? `${wid}(${w.status})` : `${wid}(unknown/dead)`; // fallback if worker not in registry
+            return w ? `${wid}(${w.status})` : `${wid}(unknown/dead)`;
           })
           .join(", ");
         log(`  chunk=${chunk.id} → [${mappingStr}]`);
