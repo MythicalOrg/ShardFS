@@ -6,6 +6,7 @@ import { workerManager } from "../services/workerManager";
 import { log, warn } from "../utils/logger";
 import { nowMs } from "../utils/time";
 import { mappingStore } from "../services/mappingStore";
+import axios from "axios";
 import { handleDeadWorkers } from "../services/reReplication";
 
 // The "unknown" type refers to the initial state of any new WebSocket connection
@@ -88,6 +89,9 @@ export function attachWebsocket(server: http.Server) {
       client.type = "worker";
       client.id = id;
 
+      //storing previous state to compare
+      const prev = workerManager.getWorker(id);
+
       // Update worker heartbeat entry
       workerManager.upsertHeartbeat({
         id,
@@ -97,6 +101,18 @@ export function attachWebsocket(server: http.Server) {
         metadata,
         status: "alive",
       });
+
+      // If this worker was previously dead -> wipe its storage
+      if (prev && prev.status === "dead") {
+        log(`[ws] Worker ${id} reconnected, sending reset...`);
+        try {
+          const url = `${host.replace(/\/+$/, "")}/reset`;
+          await axios.post(url, {}, { timeout: 10000 });
+          log(`[ws] Reset request sent to worker ${id} (${host})`);
+        } catch (err) {
+          warn(`[ws] Failed to reset worker ${id}:`, err);
+        }
+      }
 
       // Check for newly dead workers (by heartbeat expiry)
       const newlyDead = workerManager.markDeadIfExpired();
@@ -111,14 +127,13 @@ export function attachWebsocket(server: http.Server) {
         });
 
         try {
-          await handleDeadWorkers(newlyDead);
-          // correct now: newlyDead is string[]
+          await handleDeadWorkers(newlyDead); // async re-replication
         } catch (err) {
           warn("Re-replication failed:", err);
         }
       }
 
-      // broadcast latest state to dashboards
+      // here master sends current stats to dashboard after evry heartbeat cycle
       broadcastToDashboards({
         type: "cluster:update",
         data: {
@@ -127,6 +142,7 @@ export function attachWebsocket(server: http.Server) {
         },
       });
     } else if (type === "dashboard:subscribe") {
+      //here dashboard ask for stats on connection establishment
       client.type = "dashboard";
       client.ws.send(
         JSON.stringify({
@@ -137,14 +153,16 @@ export function attachWebsocket(server: http.Server) {
           },
         })
       );
-    } else if (type === "get:workers") {
-      client.ws.send(
-        JSON.stringify({
-          type: "workers:list",
-          data: workerManager.getAllWorkers(),
-        })
-      );
-    } else {
+    }
+    // else if (type === "get:workers") {
+    //   client.ws.send(
+    //     JSON.stringify({
+    //       type: "workers:list",
+    //       data: workerManager.getAllWorkers(),
+    //     })
+    //   );
+    // }
+    else {
       warn("Unknown WS message type:", type);
     }
   }
