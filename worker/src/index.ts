@@ -9,6 +9,7 @@ import { setupUploadRoute } from "./routes/upload";
 import { setupDownloadRoute } from "./routes/download";
 // import { setupReReplicateRoute } from "./routes/reReplicate";
 import { setupReReplicateRouteV2 } from "./routes/reReplicateV2";
+import { setupResetRoute } from "./routes/reset";
 import { log, error } from "./utils/logger";
 import { getConfig } from "./config";
 import { setupDeleteRoute } from "./routes/delete";
@@ -98,6 +99,9 @@ class WorkerNode {
 
     // Setup re-replication V2 endpoint (replication factor 2)
     setupReReplicateRouteV2(this.app);
+
+    // Setup reset endpoint for clearing all chunks
+    setupResetRoute(this.app);
 
     setupDeleteRoute(this.app); //
 

@@ -149,6 +149,37 @@ class StorageService {
     return this.chunks.get(chunkId);
   }
 
+  // Clear all chunks from storage and reset metadata
+  async clearAllChunks(): Promise<string[]> {
+    try {
+      const deletedChunkIds: string[] = [];
+      
+      // Get all chunk IDs before clearing
+      const chunkIds = Array.from(this.chunks.keys());
+      
+      // Delete each chunk file from disk
+      for (const chunkId of chunkIds) {
+        const chunkPath = this.getChunkPath(chunkId);
+        if (fs.existsSync(chunkPath)) {
+          fs.unlinkSync(chunkPath);
+          deletedChunkIds.push(chunkId);
+        }
+      }
+      
+      // Clear the chunks Map
+      this.chunks.clear();
+      
+      // Save empty metadata to disk (this will create an empty array in chunks.json)
+      await this.saveMetadata();
+      
+      log(`Cleared all chunks: ${deletedChunkIds.length} files deleted`);
+      return deletedChunkIds;
+    } catch (err) {
+      error("Failed to clear all chunks:", err);
+      throw err;
+    }
+  }
+
   // Private helper methods
   private getChunkPath(chunkId: string): string {
     return path.join(this.storageDir, `${chunkId}`);
@@ -213,5 +244,6 @@ export const storage = {
   getStorageStats: storageService.getStorageStats.bind(storageService), // now async!
   getAllChunkIds: storageService.getAllChunkIds.bind(storageService),
   hasChunk: storageService.hasChunk.bind(storageService),
-  getChunkInfo: storageService.getChunkInfo.bind(storageService)
+  getChunkInfo: storageService.getChunkInfo.bind(storageService),
+  clearAllChunks: storageService.clearAllChunks.bind(storageService)
 };
