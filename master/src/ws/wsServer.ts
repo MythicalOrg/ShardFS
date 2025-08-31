@@ -153,16 +153,7 @@ export function attachWebsocket(server: http.Server) {
           },
         })
       );
-    }
-    // else if (type === "get:workers") {
-    //   client.ws.send(
-    //     JSON.stringify({
-    //       type: "workers:list",
-    //       data: workerManager.getAllWorkers(),
-    //     })
-    //   );
-    // }
-    else {
+    }else {
       warn("Unknown WS message type:", type);
     }
   }
