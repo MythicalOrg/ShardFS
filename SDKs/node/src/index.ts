@@ -2,6 +2,7 @@ import { upload } from "./upload";
 import { download } from "./download";
 import { listFiles } from "./list";
 import type { ListFiles, FilePlan } from "./types";
+import { deleteFile } from "./delete";
 
 export interface ShardFSOptions {
   masterUrl: string;
@@ -30,6 +31,11 @@ export class ShardFS {
   async list(): Promise<ListFiles> {
     return listFiles(this.masterUrl, this.timeoutMs);
   }
+
+  async delete(filename: string): Promise<void> {
+    return deleteFile(filename, this.masterUrl, this.timeoutMs ?? 60000);
+}
+
 }
 
 export type { ListFiles, FilePlan };
