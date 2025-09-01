@@ -12,6 +12,7 @@ import { setupReReplicateRouteV2 } from "./routes/reReplicateV2";
 import { log, error } from "./utils/logger";
 import { getConfig } from "./config";
 import { setupDeleteRoute } from "./routes/delete";
+import { setupResetRoute } from "./routes/reset";
 
 // Main worker class - handles all worker operations
 class WorkerNode {
@@ -71,7 +72,7 @@ class WorkerNode {
     // Parse raw bodies for file chunks (up to 100MB)
     this.app.use(
       bodyParser.raw({
-        limit: "1024mb", // 1 GB
+        limit: "100mb", // 100mb
         type: "application/octet-stream",
       })
     );
@@ -100,6 +101,8 @@ class WorkerNode {
     setupReReplicateRouteV2(this.app);
 
     setupDeleteRoute(this.app); //
+
+    setupResetRoute(this.app); //
 
     // Health check endpoint
     this.app.get("/health", (req, res) => {
