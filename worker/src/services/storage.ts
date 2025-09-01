@@ -35,7 +35,7 @@ class StorageService {
 
       // Load existing chunk metadata
       await this.loadMetadata();
-      
+
       log(`Storage initialized. Found ${this.chunks.size} existing chunks`);
     } catch (err) {
       error("Failed to initialize storage:", err);
@@ -44,24 +44,28 @@ class StorageService {
   }
 
   // Save a chunk to disk
-  async saveChunk(chunkId: string, data: Buffer, metadata: Omit<ChunkInfo, "createdAt">): Promise<void> {
+  async saveChunk(
+    chunkId: string,
+    data: Buffer,
+    metadata: Omit<ChunkInfo, "createdAt">
+  ): Promise<void> {
     try {
       const chunkPath = this.getChunkPath(chunkId);
-      
+
       // Write chunk data to disk
       fs.writeFileSync(chunkPath, data);
-      
+
       // Store metadata
       const chunkInfo: ChunkInfo = {
         ...metadata,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
-      
+
       this.chunks.set(chunkId, chunkInfo);
-      
+
       // Save metadata to disk
       await this.saveMetadata();
-      
+
       log(`Saved chunk ${chunkId} (${data.length} bytes)`);
     } catch (err) {
       error(`Failed to save chunk ${chunkId}:`, err);
@@ -73,7 +77,7 @@ class StorageService {
   async getChunk(chunkId: string): Promise<Buffer | null> {
     try {
       const chunkPath = this.getChunkPath(chunkId);
-      
+
       // Check if chunk exists
       if (!fs.existsSync(chunkPath)) {
         warn(`Chunk ${chunkId} not found on disk`);
@@ -82,7 +86,7 @@ class StorageService {
 
       // Read chunk data
       const data = fs.readFileSync(chunkPath);
-      
+
       log(`Read chunk ${chunkId} (${data.length} bytes)`);
       return data;
     } catch (err) {
@@ -95,18 +99,18 @@ class StorageService {
   async deleteChunk(chunkId: string): Promise<boolean> {
     try {
       const chunkPath = this.getChunkPath(chunkId);
-      
+
       // Remove from disk
       if (fs.existsSync(chunkPath)) {
         fs.unlinkSync(chunkPath);
       }
-      
+
       // Remove from metadata
       this.chunks.delete(chunkId);
-      
+
       // Save updated metadata
       await this.saveMetadata();
-      
+
       log(`Deleted chunk ${chunkId}`);
       return true;
     } catch (err) {
@@ -116,9 +120,13 @@ class StorageService {
   }
 
   // Get storage statistics (now async!)
-  async getStorageStats(): Promise<{ totalChunks: number; totalSize: number; freeSpace: number }> {
+  async getStorageStats(): Promise<{
+    totalChunks: number;
+    totalSize: number;
+    freeSpace: number;
+  }> {
     let totalSize = 0;
-    
+
     // Calculate total size of all chunks
     for (const chunk of this.chunks.values()) {
       totalSize += chunk.size;
@@ -130,7 +138,7 @@ class StorageService {
     return {
       totalChunks: this.chunks.size,
       totalSize,
-      freeSpace
+      freeSpace,
     };
   }
 
@@ -152,6 +160,32 @@ class StorageService {
   // Private helper methods
   private getChunkPath(chunkId: string): string {
     return path.join(this.storageDir, `${chunkId}`);
+  }
+
+  private getStoragePath(): string {
+    return this.storageDir;
+  }
+
+  async clearStorage(): Promise<void> {
+    try {
+      const storagePath = this.getStoragePath();
+
+      if (fs.existsSync(storagePath)) {
+        fs.rmSync(storagePath, { recursive: true, force: true });
+      }
+
+      fs.mkdirSync(storagePath, { recursive: true });
+
+      // Clear in-memory metadata
+      this.chunks.clear();
+
+      await this.saveMetadata();
+
+      log("Storage cleared. All chunks and metadata have been reset.");
+    } catch (err) {
+      error("Failed to clear storage:", err);
+      throw err;
+    }
   }
 
   private async loadMetadata(): Promise<void> {
@@ -188,7 +222,11 @@ class StorageService {
   private async getFreeDiskSpace(): Promise<number> {
     try {
       const spaceInfo = await getDiskSpaceInfo(this.storageDir);
-      log(`Disk space - Free: ${formatBytes(spaceInfo.free)}, Total: ${formatBytes(spaceInfo.total)}`);
+      log(
+        `Disk space - Free: ${formatBytes(
+          spaceInfo.free
+        )}, Total: ${formatBytes(spaceInfo.total)}`
+      );
       return spaceInfo.free;
     } catch (err) {
       warn("Failed to get disk space:", err);
@@ -213,5 +251,6 @@ export const storage = {
   getStorageStats: storageService.getStorageStats.bind(storageService), // now async!
   getAllChunkIds: storageService.getAllChunkIds.bind(storageService),
   hasChunk: storageService.hasChunk.bind(storageService),
-  getChunkInfo: storageService.getChunkInfo.bind(storageService)
+  getChunkInfo: storageService.getChunkInfo.bind(storageService),
+  clearStorage: storageService.clearStorage.bind(storageService),
 };

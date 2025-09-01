@@ -22,6 +22,19 @@ export function createMappingStore() {
     return files.delete(filename);
   };
 
+  const removeWorker = (workerId: string) =>{
+  for (const file of files.values()) {
+    for (const chunk of file.chunks) {
+      if (chunk.workers) {
+        // overwrite chunk.workers with a new array
+        // containing everything except the given workerId
+        chunk.workers = chunk.workers.filter((w) => w !== workerId);
+      }
+    }
+  }
+}
+
+
   // placeholder for persistence logic in future
   // e.g., save to DB or reload from DB
 
@@ -30,6 +43,7 @@ export function createMappingStore() {
     getFilePlan,
     listFiles,
     removeFilePlan,
+    removeWorker,
   };
 }
 

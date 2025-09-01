@@ -109,6 +109,7 @@ export function attachWebsocket(server: http.Server) {
           const url = `${host.replace(/\/+$/, "")}/reset`;
           await axios.post(url, {}, { timeout: 10000 });
           log(`[ws] Reset request sent to worker ${id} (${host})`);
+          mappingStore.removeWorker(id);
         } catch (err) {
           warn(`[ws] Failed to reset worker ${id}:`, err);
         }
