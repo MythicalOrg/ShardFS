@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: "/dashboard/", // ✅ set the base path for assets
   build: {
-    outDir: path.resolve(__dirname, "../dist"),
+    outDir: path.resolve(__dirname, "../../react-dist/dist"),
     emptyOutDir: true,
   },
 });

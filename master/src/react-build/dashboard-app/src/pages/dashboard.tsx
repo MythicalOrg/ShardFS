@@ -209,7 +209,7 @@ export default function Dashboard() {
     return (
       <motion.div
         layout
-        className="p-4 rounded-xl bg-gray-900/70 border border-gray-800 text-center"
+        className="p-4 rounded-xl bg-gray-900/70 border border-gray-700 text-center"
       >
         <div className={`text-2xl font-bold ${accent}`}>{value}</div>
         <p className="text-xs text-gray-400">{label}</p>
@@ -227,7 +227,7 @@ export default function Dashboard() {
     return (
       <motion.div
         layout
-        className="p-5 rounded-2xl bg-gray-900/70 border border-gray-800"
+        className="p-5 rounded-2xl bg-gray-900/70 border border-gray-700"
       >
         <h3 className="font-semibold text-lg text-gray-200 mb-2">{title}</h3>
         {children}
@@ -241,8 +241,8 @@ export default function Dashboard() {
       <AlertsProvider />
 
       {/* Header */}
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-green-400 bg-clip-text text-transparent">
+      <header className="mb-8 text-start">
+        <h1 className="text-4xl font-extrabold tracking-tight font-mono">
           ShardFS Cluster Dashboard
         </h1>
         <p className="text-gray-400 text-sm mt-1">
@@ -340,7 +340,7 @@ export default function Dashboard() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Workers */}
-        <section className="bg-gray-950/60 backdrop-blur-md shadow-lg rounded-2xl p-6 border border-gray-800">
+        <section className="bg-gray-950/60 backdrop-blur-md shadow-lg rounded-2xl p-6 border border-gray-700">
           <h2 className="text-2xl font-semibold mb-4 text-blue-400">
             Worker Nodes
           </h2>
@@ -372,7 +372,7 @@ export default function Dashboard() {
         </section>
 
         {/* Files / Table */}
-        <section className="bg-gray-950/60 backdrop-blur-md shadow-lg rounded-2xl p-6 border border-gray-800">
+        <section className="bg-gray-950/60 backdrop-blur-md shadow-lg rounded-2xl p-6 border border-gray-700">
           <h2 className="text-2xl font-semibold mb-4 text-green-400">
             Stored Files
           </h2>

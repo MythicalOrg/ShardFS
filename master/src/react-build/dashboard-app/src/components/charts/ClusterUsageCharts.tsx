@@ -25,7 +25,7 @@ export default function ClusterUsageChart({ data }: { data: UsagePoint[] }) {
             <CartesianGrid opacity={0.06} />
             <XAxis
               dataKey="t"
-              tickFormatter={(v) => new Date(v).toLocaleTimeString()}
+              tickFormatter={(v) => new Date(v).toLocaleTimeString([], { minute: "2-digit", second: "2-digit" })}
             />
             <YAxis
               tickFormatter={(v) => `${(v / (1024 * 1024)).toFixed(1)} MB`}

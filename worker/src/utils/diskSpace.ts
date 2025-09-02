@@ -12,6 +12,11 @@ export async function getDiskSpaceInfo(storagePath: string): Promise<{ free: num
       const abs = path.resolve(storagePath);
       diskPath = abs.slice(0, 3); // "C:\" from "C:\Users\..."
     }
+    if(process.platform === "linux") {
+      const abs = path.resolve(storagePath);
+      diskPath = path.parse(abs).root; 
+    }
+    console.log("Checking disk space for path:", diskPath);
     const { free, size: total } = await checkDiskSpace(diskPath);
     const used = total - free;
     return { free, total, used };
