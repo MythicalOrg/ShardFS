@@ -25,7 +25,7 @@ app.use("/api", getAllFiles);
 app.use("/api", deleteRoute);
 
 // serve react dashboard - expects build in /react-build
-serveDashboard(app, path.join(process.cwd(), "src/react-build/dist"));
+serveDashboard(app, path.join(process.cwd(), "src/react-dist/dist"));
 
 const server = http.createServer(app);
 
