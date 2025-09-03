@@ -3,9 +3,11 @@ import path from "path";
 
 export function serveDashboard(
   app: express.Application,
-  reactBuildPath = path.join(process.cwd(), "src/react-dist/dist")
+  reactBuildPath:string
 ) {
   // Serve React build assets
+  console.log("Serving dashboard from:", process.cwd());
+  console.log("React build path:", reactBuildPath);
   app.use("/dashboard", express.static(reactBuildPath));
 
   // Wildcard for React router
