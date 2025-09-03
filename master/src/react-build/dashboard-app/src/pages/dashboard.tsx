@@ -22,8 +22,8 @@ const fmtBytes = (n: number) => {
 
 export default function Dashboard() {
   // build WS url from current host (works for dev & prod behind proxy)
-
-  const Master_URL = `ws://${window.location.host}/ws`;
+  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  const Master_URL = `${protocol}://${window.location.host}/ws`;
 
   const { data, status } = useWebSocket(Master_URL);
 
