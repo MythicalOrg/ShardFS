@@ -27,3 +27,6 @@ export interface FilePlan {
   createdAt: number;
   status?: "active" | "deleting" | "deleted";
 }
+
+// Usage sample point used by dashboard: timestamp (ms) and logical/physical bytes
+export type UsagePoint = { t: number; logical: number; physical: number };
