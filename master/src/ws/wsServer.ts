@@ -6,6 +6,7 @@ import { workerManager } from "../services/workerManager";
 import { log, warn } from "../utils/logger";
 import { nowMs } from "../utils/time";
 import { mappingStore } from "../services/mappingStore";
+import { clusterStats } from "../services/clusterStats";
 import axios from "axios";
 import { handleDeadWorkers } from "../services/reReplication";
 
@@ -135,6 +136,24 @@ export function attachWebsocket(server: http.Server) {
       }
 
       // here master sends current stats to dashboard after evry heartbeat cycle
+      // also record aggregated cluster usage sample for history
+      try {
+        const ws = workerManager.getAllWorkers();
+        // aggregate logical/physical bytes across workers
+        const logical = ws.reduce(
+          (acc, w) => acc + (w.totalBytes ?? 0) - w.freeBytes,
+          0
+        );
+        const physical = ws.reduce((acc, w) => acc + (w.totalBytes ?? 0), 0);
+        clusterStats.addSample({
+          t: Date.now(),
+          logical: Math.max(0, logical),
+          physical: Math.max(0, physical),
+        });
+      } catch (e) {
+        warn("failed to record clusterStats sample", e);
+      }
+
       broadcastToDashboards({
         type: "cluster:update",
         data: {
@@ -151,10 +170,12 @@ export function attachWebsocket(server: http.Server) {
           data: {
             workers: workerManager.getAllWorkers(),
             files: mappingStore.listFiles(),
+            // include recent history (~ last 10 minutes)
+            history: clusterStats.getRecent(10 * 60 * 1000),
           },
         })
       );
-    }else {
+    } else {
       warn("Unknown WS message type:", type);
     }
   }
