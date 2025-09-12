@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "cd src && ts-node index.ts",
     "start": "cd dist && node index.js",
-    "build": "tsc -b && cd src/react-build/dashboard-app && npm install && npm run build && cd ../../../ && copyfiles -u 1 src/react-dist/dist/** dist"
+    "build": "tsc -b && cd src/react-build/dashboard-app && npm install && npm run build && cd ../../../ && cpx \"src/react-build/dist/**/*\" dist/react-dist/dist"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +26,7 @@
     "@types/express": "^5.0.3",
     "@types/ws": "^8.18.1",
     "copyfiles": "^2.4.1",
+    "cpx": "^1.2.1",
     "ts-node": "^10.9.2"
   }
 }
